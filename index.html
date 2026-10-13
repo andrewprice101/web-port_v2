@@ -39,61 +39,78 @@
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(88, 101, 242, 0.3);
         }
+        #status-msg {
+            color: #ff9f43;
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
 
     <h1>EPIK-GAMER ARCADE</h1>
-    <p>Select a game to launch it instantly inside a cloaked tab</p>
+    <p>Deep scanning repository tree for entry files...</p>
 
+    <div id="status-msg">Scanning full repository map...</div>
     <div class="grid" id="game-grid"></div>
 
     <script>
-        // MASTER GAME LIST: Enter the exact folder names from your repository here
-        const GAME_FOLDERS = [
-            "amanda-the-adventurer",
-            "andys-apple-farm",
-            "baldi-plus",
-            "baldi-remaster",
-            "bendy",
-            "bergentruck",
-            "bloodmoney",
-            "buckshot-roulette",
-            "cuphead",
-            "five-nights-at-freddys",
-            "geometry-dash",
-            "get-away-shootout",
-            "gun-mayhem",
-            "iron-snout",
-            "minecraft",
-            "omori-fixed",
-            "pizza-tower",
-            "retro-bowl",
-            "roblox",
-            "slope",
-            "subway-surfers",
-            "thats-not-my-neighbor",
-            "tunnel-rush",
-            "ultrakill",
-            "undertale-yellow",
-            "vex-7"
-        ];
+        // CONFIGURATION: Map to your specific profile and repository names
+        const GITHUB_USER = 'andrewprice101';
+        const REPO_NAME = 'web-port_v2';
+        const TARGET_BRANCH = 'main'; // Change to 'master' if your repo uses it
 
-        function generateGameButtons() {
+        async function deeplyScanRepository() {
             const grid = document.getElementById('game-grid');
+            const status = document.getElementById('status-msg');
             
-            GAME_FOLDERS.forEach(folder => {
-                const button = document.createElement('button');
-                button.className = 'game-btn';
+            try {
+                // Single high-efficiency call requesting the full recursive file layout
+                const apiUrl = `https://api.github.com/repos/${GITHUB_USER}/${REPO_NAME}/git/trees/${TARGET_BRANCH}?recursive=1`;
+                const response = await fetch(apiUrl);
                 
-                // Cleans up the folder name text for the button layout (e.g. pizza-tower -> pizza tower)
-                button.innerText = folder.replace(/-/g, ' ');
+                if (!response.ok) throw new Error('API limit reached or directory restricted');
                 
-                // On click, it explicitly points to the folder's index file inside the about:blank frame
-                button.onclick = () => launchStealthTab(`./${folder}/index.html`);
+                const data = await response.json();
+                status.style.display = 'none'; // Clear out the loading notice
                 
-                grid.appendChild(button);
-            });
+                let buttonCreated = false;
+
+                // Examine every element returned across the entire repository tree structure
+                data.tree.forEach(item => {
+                    // Look for items that end with index.html but ignore your primary dashboard index.html
+                    if (item.path.toLowerCase().endsWith('index.html') && item.path.toLowerCase() !== 'index.html') {
+                        
+                        // Extract the folder location name by dropping the trailing /index.html
+                        const folderPath = item.path.substring(0, item.path.toLowerCase().lastIndexOf('/index.html'));
+                        
+                        // If the index file is hidden deeper inside nested subfolders, grab just the last directory name
+                        const displayTitle = folderPath.includes('/') ? folderPath.split('/').pop() : folderPath;
+                        
+                        const button = document.createElement('button');
+                        button.className = 'game-btn';
+                        
+                        // Clean up formatting for visual display (e.g. omori-fixed -> omori fixed)
+                        button.innerText = displayTitle.replace(/-/g, ' ');
+                        
+                        // Onclick launches the exact path relative to your hosted layout inside the frame
+                        button.onclick = () => launchStealthTab(`./${item.path}`);
+                        
+                        grid.appendChild(button);
+                        buttonCreated = true;
+                    }
+                });
+
+                if (!buttonCreated) {
+                    status.innerText = 'No internal index.html files located inside your game subfolders.';
+                    status.style.display = 'block';
+                }
+
+            } catch (err) {
+                status.innerText = 'Unable to compile arcade map. Try refreshing shortly.';
+                status.style.color = '#ff3e3e';
+                console.error(err);
+            }
         }
 
         function launchStealthTab(targetPath) {
@@ -122,12 +139,11 @@
                 
                 doc.body.appendChild(iframe);
             } else {
-                alert('Pop-up blocked! Please grant popup permissions to allow the cloaked layout to run.');
+                alert('Pop-up window blocked! Enable standard popups to run the cloaked frame components.');
             }
         }
 
-        // Initialize the layout builder immediately
-        window.onload = generateGameButtons;
+        window.onload = deeplyScanRepository;
     </script>
 
 </body>
