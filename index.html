@@ -18,56 +18,122 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
         }
-        button {
+        .game-btn {
             background-color: #1a1a24;
             padding: 25px 15px;
             border-radius: 12px;
             color: #ffffff;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             border: 2px solid #2d2d3d;
             cursor: pointer;
+            text-transform: capitalize;
             transition: all 0.2s ease;
         }
-        button:hover {
+        .game-btn:hover {
             border-color: #5865F2;
             background-color: #232332;
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(88, 101, 242, 0.3);
+        }
+        #status-msg {
+            color: #ff9f43;
+            font-size: 1.2rem;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
 
     <h1>EPIK-GAMER ARCADE</h1>
-    <p>Games open securely inside cloaked about:blank containers</p>
+    <p>Automatically scanning root directories for verified index launch points...</p>
 
-    <div class="grid">
-        <button onclick="openGame('./pizza-tower/')">🍕 Pizza Tower</button>
-        <button onclick="openGame('./cuphead/')">☕ Cuphead</button>
-        <button onclick="openGame('./buckshot-roulette/')">🎲 Buckshot Roulette</button>
-        <button onclick="openGame('./thats-not-my-neighbor/')">🚪 That's Not My Neighbor</button>
-        <button onclick="openGame('./omori-fixed/')">👁️ OMORI</button>
-        <button onclick="openGame('./ultrakill/')">🤖 Ultrakill</button>
-    </div>
+    <div id="status-msg">Scanning folders for entry points...</div>
+    <div class="grid" id="game-grid"></div>
 
     <script>
-        function openGame(gameUrl) {
-            // 1. Open a fresh completely blank browser tab
+        // CONFIGURATION: Set your GitHub profile and repository identity
+        const GITHUB_USER = 'andrewprice101';
+        const REPO_NAME = 'web-port_v2';
+
+        // Root folders we want to completely skip checking
+        const IGNORED_FOLDERS = ['.github', '.git'];
+
+        async function verifyAndLoadGames() {
+            const grid = document.getElementById('game-grid');
+            const status = document.getElementById('status-msg');
+            
+            try {
+                // Step 1: Call the GitHub API to fetch the contents of the main root directory
+                const rootResponse = await fetch(`https://github.com{GITHUB_USER}/${REPO_NAME}/contents/`);
+                if (!rootResponse.ok) throw new Error('Failed to fetch repository root contents');
+                
+                const rootItems = await rootResponse.json();
+                let verifiedGamesCount = 0;
+
+                // Step 2: Loop through every item found in the root directory
+                for (const item of rootItems) {
+                    if (item.type === 'dir' && !IGNORED_FOLDERS.includes(item.name)) {
+                        
+                        // Step 3: Check inside the folder to see if an index.html exists
+                        try {
+                            const folderResponse = await fetch(`https://github.com{GITHUB_USER}/${REPO_NAME}/contents/${item.name}`);
+                            if (folderResponse.ok) {
+                                const folderContents = await folderResponse.json();
+                                
+                                // Look for an exact match for index.html inside this specific folder
+                                const hasIndex = folderContents.some(file => file.name.toLowerCase() === 'index.html');
+                                
+                                if (hasIndex) {
+                                    // Step 4: Create the button if verified
+                                    const button = document.createElement('button');
+                                    button.className = 'game-btn';
+                                    
+                                    // Set the button text to the folder name (replacing hyphens with clean spaces)
+                                    button.innerText = item.name.replace(/-/g, ' ');
+                                    
+                                    // Route the click event to open the folder's index inside the cloaked view
+                                    button.onclick = () => launchStealthTab(`./${item.name}/index.html`);
+                                    
+                                    grid.appendChild(button);
+                                    verifiedGamesCount++;
+                                }
+                            }
+                        } catch (folderErr) {
+                            console.warn(`Could not read contents of folder: ${item.name}`, folderErr);
+                        }
+                    }
+                }
+
+                // Update or hide the status message based on findings
+                if (verifiedGamesCount === 0) {
+                    status.innerText = 'No valid game folders with index.html files found.';
+                } else {
+                    status.style.display = 'none';
+                }
+
+            } catch (err) {
+                status.innerText = 'System error scanning directories. Please refresh the page.';
+                status.style.color = '#ff3e3e';
+                console.error(err);
+            }
+        }
+
+        function launchStealthTab(targetPath) {
+            // Open a fresh, completely blank instance tab
             var blankWindow = window.open('about:blank', '_blank');
             
             if (blankWindow) {
-                // 2. Build a full-viewport responsive embedding frame inside the blank tab
-                var document = blankWindow.document;
-                var iframe = document.createElement('iframe');
+                var doc = blankWindow.document;
+                var iframe = doc.createElement('iframe');
                 
-                // Resolve the absolute path of the relative gameUrl
-                var targetUrl = new URL(gameUrl, window.location.href).href;
+                // Resolve the absolute URL string for the embedded target
+                var absoluteUrl = new URL(targetPath, window.location.href).href;
                 
-                iframe.src = targetUrl;
+                iframe.src = absoluteUrl;
                 iframe.style.position = 'fixed';
                 iframe.style.top = '0';
                 iframe.style.left = '0';
@@ -78,17 +144,18 @@
                 iframe.style.padding = '0';
                 iframe.style.overflow = 'hidden';
                 
-                // Remove default page margins inside the new frame body
-                document.body.style.margin = '0';
-                document.body.style.padding = '0';
-                document.body.style.overflow = 'hidden';
+                doc.body.style.margin = '0';
+                doc.body.style.padding = '0';
+                doc.body.style.overflow = 'hidden';
                 
-                // Inject the game frame into the blank container page
-                document.body.appendChild(iframe);
+                doc.body.appendChild(iframe);
             } else {
-                alert('Pop-up blocked! Please click the pop-up icon in your browser search bar to allow the cloaked page to open.');
+                alert('Pop-up blocked! Please grant popup permissions to allow the cloaked canvas to load.');
             }
         }
+
+        // Initialize the repository content evaluation on page arrival
+        window.onload = verifyAndLoadGames;
     </script>
 
 </body>
