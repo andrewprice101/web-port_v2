@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPIK-GAMER Portal</title>
+    <style>
+        body {
+            background-color: #0f0f12;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 50px 20px;
+        }
+        h1 { color: #5865F2; font-size: 3rem; margin-bottom: 5px; }
+        p { color: #8a8f98; margin-bottom: 40px; font-size: 1.1rem; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        button {
+            background-color: #1a1a24;
+            padding: 25px 15px;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: 2px solid #2d2d3d;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            border-color: #5865F2;
+            background-color: #232332;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(88, 101, 242, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>EPIK-GAMER ARCADE</h1>
+    <p>Games open securely inside cloaked about:blank containers</p>
+
+    <div class="grid">
+        <button onclick="openGame('./pizza-tower/')">🍕 Pizza Tower</button>
+        <button onclick="openGame('./cuphead/')">☕ Cuphead</button>
+        <button onclick="openGame('./buckshot-roulette/')">🎲 Buckshot Roulette</button>
+        <button onclick="openGame('./thats-not-my-neighbor/')">🚪 That's Not My Neighbor</button>
+        <button onclick="openGame('./omori-fixed/')">👁️ OMORI</button>
+        <button onclick="openGame('./ultrakill/')">🤖 Ultrakill</button>
+    </div>
+
+    <script>
+        function openGame(gameUrl) {
+            // 1. Open a fresh completely blank browser tab
+            var blankWindow = window.open('about:blank', '_blank');
+            
+            if (blankWindow) {
+                // 2. Build a full-viewport responsive embedding frame inside the blank tab
+                var document = blankWindow.document;
+                var iframe = document.createElement('iframe');
+                
+                // Resolve the absolute path of the relative gameUrl
+                var targetUrl = new URL(gameUrl, window.location.href).href;
+                
+                iframe.src = targetUrl;
+                iframe.style.position = 'fixed';
+                iframe.style.top = '0';
+                iframe.style.left = '0';
+                iframe.style.width = '100vw';
+                iframe.style.height = '100vh';
+                iframe.style.border = 'none';
+                iframe.style.margin = '0';
+                iframe.style.padding = '0';
+                iframe.style.overflow = 'hidden';
+                
+                // Remove default page margins inside the new frame body
+                document.body.style.margin = '0';
+                document.body.style.padding = '0';
+                document.body.style.overflow = 'hidden';
+                
+                // Inject the game frame into the blank container page
+                document.body.appendChild(iframe);
+            } else {
+                alert('Pop-up blocked! Please click the pop-up icon in your browser search bar to allow the cloaked page to open.');
+            }
+        }
+    </script>
+
+</body>
+</html>
